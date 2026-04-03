@@ -1,0 +1,113 @@
+\section{Model}
+
+This section presents a model of parallel foreign-exchange markets in an economy with an overvalued official exchange rate. The key feature of the model is that foreign-currency demand arises from two distinct motives: a non-strategic hedge motive and a strategic run motive governed by a global game. Stablecoins affect equilibrium through both a cost channel and an information channel.
+
+\subsection{Environment}
+
+The economy is populated by a continuum of households $i \in [0,1]$. The state of the economy is summarized by $\theta \ge 0$, which measures the degree of exchange-rate overvaluation. A higher $\theta$ implies greater excess demand for foreign currency and weaker fundamentals.
+
+Households can acquire foreign currency using two instruments: cash and stablecoins. These instruments differ in transaction costs and in their contribution to price transparency.
+
+\subsection{Information}
+
+Households do not observe $\theta$ directly. Each household receives a private signal
+\begin{equation}
+ x_i = \theta + \varepsilon_i, \qquad \varepsilon_i \sim N(0,\sigma_x^2),
+\end{equation}
+and all households observe a public signal
+\begin{equation}
+ s = \theta + \eta, \qquad \eta \sim N(0,\sigma_s^2).
+\end{equation}
+
+The precision of the public signal depends on aggregate stablecoin usage:
+\begin{equation}
+ \sigma_s^2 = \frac{\bar\sigma_s^2}{1 + \rho Q_S}.
+\end{equation}
+
+Thus, greater stablecoin activity improves the precision of publicly observed prices.
+
+Given Gaussian signals, posterior beliefs are linear:
+\begin{equation}
+ m_i = \omega_0 \mu_\theta + \omega_x x_i + \omega_s s,
+\end{equation}
+where the weights depend on signal precisions.
+
+\subsection{Foreign-Currency Demand}
+
+Total foreign-currency demand is the sum of hedge demand and run demand:
+\begin{equation}
+ Q_i^{FX} = Q_i^{hedge} + Q_i^{run}.
+\end{equation}
+
+\paragraph{Hedge demand.} Households demand foreign currency to smooth consumption. We assume
+\begin{equation}
+ Q_i^{hedge} = \max\{0, \chi_h m_i - \eta_h p^{FX}\},
+\end{equation}
+which is increasing in expected overvaluation and decreasing in acquisition costs.
+
+\paragraph{Run demand.} Households may choose to run into foreign currency. Let $a_i \in \{0,1\}$ denote the run decision, and let
+\begin{equation}
+ Q_i^{run} = \bar r a_i.
+\end{equation}
+
+\subsection{Crisis}
+
+The authorities can sustain foreign-currency demand up to
+\begin{equation}
+ R(\theta) = \alpha - \delta \theta.
+\end{equation}
+
+A crisis occurs if aggregate demand exceeds this threshold:
+\begin{equation}
+ Q^{FX} \ge R(\theta).
+\end{equation}
+
+\subsection{Run Decision and Global Game}
+
+If a household runs, it receives benefit $B$ but pays cost $\kappa_r$. If it does not run, it faces a potential crisis loss. The gain from running is
+\begin{equation}
+ \Delta U_i = B - \kappa_r + \mathbb{E}[\mathbf{1}\{\text{crisis}\} L(\theta,\omega_s) \mid x_i,s].
+\end{equation}
+
+The loss function is
+\begin{equation}
+ L(\theta,\omega_s) = \lambda \theta (1 + \xi \omega_s),
+\end{equation}
+which increases with fundamentals and coordination.
+
+Households follow a cutoff strategy: there exists $x^*(s)$ such that
+\begin{equation}
+ a_i = 1 \iff x_i \ge x^*(s).
+\end{equation}
+
+The cutoff satisfies the indifference condition
+\begin{equation}
+ B - \kappa_r + \int \mathbf{1}\{Q^{FX}(\theta,s) \ge R(\theta)\} L(\theta,\omega_s) f(\theta \mid x^*, s) d\theta = 0.
+\end{equation}
+
+\subsection{Stablecoin Market}
+
+Foreign currency can be accessed through cash or stablecoins. Prices are
+\begin{equation}
+ p_C = a_C + b_C \sqrt{Q_C}, \qquad p_S = a_S + b_S \sqrt{Q_S}.
+\end{equation}
+
+Total costs include transaction frictions. The share of stablecoins is
+\begin{equation}
+ \omega^S = \Lambda(\nu(c_C - c_S) + \phi \omega_s).
+\end{equation}
+
+Thus, stablecoin usage depends on both relative costs and information advantages.
+
+\subsection{Equilibrium}
+
+An equilibrium consists of foreign-currency demand, a cutoff strategy, stablecoin usage, and signal precision such that:
+\begin{enumerate}
+\item Households optimize given beliefs,
+\item The cutoff satisfies the global-game indifference condition,
+\item Markets clear for foreign currency,
+\item Crisis outcomes satisfy the threshold condition,
+\item Signal precision is consistent with aggregate stablecoin usage.
+\end{enumerate}
+
+The equilibrium is solved numerically using a nested fixed-point algorithm.
