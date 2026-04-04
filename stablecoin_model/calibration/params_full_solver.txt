@@ -1,0 +1,12 @@
+rho = 4.0
+alpha = 0.86
+delta = 0.08
+rbar = 0.18
+lambda_loss = 0.35
+xi_coord = 0.35
+a_s = 0.025
+b_s = 0.055
+kappa_s = 0.06
+nu_share = 6.0
+phi_share = 0.9
+run_weight_normal = 0.3
