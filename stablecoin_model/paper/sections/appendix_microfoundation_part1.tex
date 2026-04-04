@@ -1,0 +1,18 @@
+\appendix
+
+\section{Microfoundation of Endogenous Public Signal Precision}
+
+This appendix provides a microfoundation for the endogenous precision of the public signal used in the main text.
+
+\subsection{Setup}
+
+Suppose a mass $n_s$ of agents participate in the stablecoin market. Each participating agent $j$ observes a private signal about the underlying exchange-rate misalignment $\theta$:
+\begin{equation}
+z_j = \theta + \nu_j, \quad \nu_j \sim \mathcal{N}(0, \sigma_\nu^2).
+\end{equation}
+
+Each agent submits an order proportional to that signal:
+\begin{equation}
+o_j = \kappa z_j,
+\end{equation}
+where $\kappa > 0$ is a scaling parameter.
