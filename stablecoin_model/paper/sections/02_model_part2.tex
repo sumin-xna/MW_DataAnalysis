@@ -1,0 +1,58 @@
+\subsection{Information Structure}
+
+Agents do not observe the fundamental $\theta$ directly. Instead, they receive information from two sources corresponding to the two foreign currency instruments.
+
+\paragraph{Private signal (cash price)}
+Each agent $i$ observes a private signal:
+\begin{equation}
+x_i = \theta + \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, \sigma_x^2),
+\end{equation}
+which can be interpreted as the price in decentralized cash markets. This signal is noisy and privately observed.
+
+\paragraph{Public signal (stablecoin price)}
+All agents observe a common public signal:
+\begin{equation}
+s = \theta + \eta, \quad \eta \sim \mathcal{N}(0, \sigma_s^2(q_s)).
+\end{equation}
+
+Crucially, the variance of the public signal depends on equilibrium stablecoin usage:
+\begin{equation}
+\sigma_s^2(q_s) = \frac{\bar{\sigma}_s^2}{1 + \rho q_s}, \quad \rho > 0.
+\end{equation}
+
+Thus, higher stablecoin adoption increases the precision of the public signal.
+
+\subsection{Endogenous Information}
+
+The dependence of $\sigma_s^2$ on $q_s$ introduces a feedback loop:
+\begin{enumerate}
+\item Higher $q_s$ \rightarrow more informative public signal
+\item More informative signal \rightarrow stronger coordination
+\item Stronger coordination \rightarrow changes in asset demand
+\end{enumerate}
+
+This endogeneity is central to the model and distinguishes it from standard global-games frameworks with exogenous public signals.
+
+\subsection{Beliefs}
+
+Agents form posterior beliefs about $\theta$ using Bayes' rule. Given normal priors and signals, the posterior mean is linear:
+\begin{equation}
+\mathbb{E}[\theta \mid x_i, s] = w_0 \mu + w_x x_i + w_s s,
+\end{equation}
+where weights depend on signal precisions:
+\begin{align}
+\tau_\theta &= \frac{1}{\sigma_\theta^2}, \\
+\tau_x &= \frac{1}{\sigma_x^2}, \\
+\tau_s(q_s) &= \frac{1}{\sigma_s^2(q_s)}.
+\end{align}
+
+The weights are given by:
+\begin{align}
+w_0 &= \frac{\tau_\theta}{\tau_\theta + \tau_x + \tau_s}, \\
+w_x &= \frac{\tau_x}{\tau_\theta + \tau_x + \tau_s}, \\
+w_s &= \frac{\tau_s}{\tau_\theta + \tau_x + \tau_s}.
+\end{align}
+
+\subsection{Implications}
+
+As stablecoin usage increases, $\tau_s$ increases and agents place more weight on the public signal $s$. This shifts beliefs toward common information and reduces the dispersion of posterior beliefs across agents. As a result, agents' actions become more correlated, strengthening coordination in equilibrium.
