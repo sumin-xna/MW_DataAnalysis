@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UV Spectral Data Dropzone</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --accent: #111827;
+      --accent-2: #e2e8f0;
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    p.lead { margin: 0 0 24px; color: var(--muted); line-height: 1.5; }
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+    }
+    .card h2 {
+      margin: 0;
+      padding: 18px 20px 0;
+      font-size: 20px;
+    }
+    .card-body { padding: 20px; }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 18px;
+      padding: 48px 20px;
+      text-align: center;
+      background: white;
+      transition: .15s ease;
+    }
+    .dropzone.active {
+      border-color: var(--accent);
+      background: #f1f5f9;
+    }
+    .dropzone p { margin: 10px 0; color: var(--muted); }
+    .controls { display: grid; gap: 12px; }
+    label { font-size: 14px; font-weight: 600; }
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 16px;
+    }
+    .button-row, .file-tags, .action-row, .tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button, .fake-button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    button.danger {
+      background: white;
+      color: var(--danger);
+      border-color: #fecaca;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .tag {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--border);
+      background: var(--accent-2);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .muted { color: var(--muted); }
+    .errors { margin-top: 14px; display: grid; gap: 6px; color: var(--danger); font-size: 14px; }
+    .tabs { margin-bottom: 12px; }
+    .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .table-wrap {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .scroll { max-height: 520px; overflow: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 1;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    .footnote { padding: 10px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid #e2e8f0; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>UV Spectral Data Dropzone</h1>
+    <p class="lead">Drop one or more spectrometer <code>.txt</code> files, set the distance in cm, and the app will apply <code>value × 4 × π × distance² / 1,000,000</code>, combine all tests into one table, and split the results into 200–280, 281–320, and 321–400.</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Drop files</h2>
+        <div class="card-body">
+          <div id="dropzone" class="dropzone">
+            <div style="font-size:40px; line-height:1;">⬆️</div>
+            <div style="font-size:20px; font-weight:700; margin-top:8px;">Drag and drop your .txt files here</div>
+            <p>or</p>
+            <label class="fake-button">
+              Select files
+              <input id="fileInput" type="file" accept=".txt" multiple hidden />
+            </label>
+          </div>
+          <div id="errors" class="errors"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Settings</h2>
+        <div class="card-body controls">
+          <div>
+            <label for="distance">Distance (cm)</label>
+            <input id="distance" type="number" value="150" />
+          </div>
+          <div class="button-row">
+            <button type="button" data-distance="150">150 cm</button>
+            <button type="button" data-distance="250">250 cm</button>
+          </div>
+          <div class="muted">Files loaded: <strong id="fileCount">0</strong></div>
+          <div class="muted">Rows in combined table: <strong id="rowCount">0</strong></div>
+          <div class="action-row">
+            <button id="exportExcel" class="primary" disabled>Export Excel</button>
+            <button id="exportAllCsv" disabled>Export all data CSV</button>
+            <button id="exportSummaryCsv" disabled>Export band summary CSV</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-bottom: 20px;">
+      <h2>Loaded files</h2>
+      <div class="card-body">
+        <div id="fileTags" class="file-tags"></div>
+        <div style="margin-top: 14px;">
+          <button id="clearFiles" class="danger" disabled>Clear files</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="table-wrap">
+      <div class="scroll">
+        <table id="dataTable"></table>
+      </div>
+      <div id="tableFootnote" class="footnote">No rows to display.</div>
+    </div>
+  </div>
+
+  <script>
+    const BEGIN_MARKER = '>>>>>Begin Spectral Data<<<<<';
+    const PI = 3.141592654;
+    const state = {
+      parsedFiles: [],
+      errors: [],
+      activeTab: 'all'
+    };
+
+    const tabs = [
+      { key: 'all', label: 'All Data' },
+      { key: '200-280', label: '200–280' },
+      { key: '281-320', label: '281–320' },
+      { key: '321-400', label: '321–400' },
+      { key: 'summary', label: 'Band Summary' }
+    ];
+
+    function extractTestName(filename) {
+      const match = filename.match(/#\s*(\d+)/i);
+      if (match) return `Test ${match[1]}`;
+      return filename.replace(/\.txt$/i, '');
+    }
+
+    function parseSpectralFile(text, filename) {
+      const lines = text.split(/\r?\n/);
+      const markerIndex = lines.findIndex(line => line.includes(BEGIN_MARKER));
+      if (markerIndex === -1) throw new Error(`${filename}: spectral data marker not found`);
+
+      const rows = [];
+      for (let i = markerIndex + 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split(/\s+/);
+        if (parts.length < 2) continue;
+        const wavelength = Number(parts[0]);
+        const value = Number(parts[1]);
+        if (Number.isFinite(wavelength) && Number.isFinite(value)) {
+          rows.push({ wavelength, value });
+        }
+      }
+      if (!rows.length) throw new Error(`${filename}: no spectral rows found`);
+      return { filename, testName: extractTestName(filename), rows };
+    }
+
+    function transformRows(rows, distance) {
+      const factor = (4 * PI * distance * distance) / 1000000;
+      return rows.map(r => ({ wavelength: Number(r.wavelength), value: r.value * factor }));
+    }
+
+    function buildCombinedTable(parsedFiles, distance) {
+      const byWavelength = new Map();
+      parsedFiles.forEach(file => {
+        const transformed = transformRows(file.rows, distance);
+        transformed.forEach(row => {
+          const key = row.wavelength;
+          if (!byWavelength.has(key)) byWavelength.set(key, { wavelength: key });
+          byWavelength.get(key)[file.testName] = row.value;
+        });
+      });
+      return Array.from(byWavelength.values()).sort((a, b) => a.wavelength - b.wavelength);
+    }
+
+    function filterBand(rows, min, max) {
+      return rows.filter(r => r.wavelength >= min && r.wavelength <= max);
+    }
+
+    function buildBandSummary(rows) {
+      if (!rows.length) return [];
+      const allColumns = new Set();
+      rows.forEach(row => Object.keys(row).forEach(k => allColumns.add(k)));
+      const testColumns = Array.from(allColumns).filter(k => k !== 'wavelength');
+      const bands = [
+        { label: '200-280', min: 200, max: 280 },
+        { label: '281-320', min: 281, max: 320 },
+        { label: '321-400', min: 321, max: 400 }
+      ];
+      return bands.map(band => {
+        const subset = filterBand(rows, band.min, band.max);
+        const out = { Band: band.label };
+        testColumns.forEach(col => {
+          out[col] = subset.reduce((sum, row) => sum + (Number(row[col]) || 0), 0);
+        });
+        return out;
+      });
+    }
+
+    function toCsv(rows) {
+      if (!rows.length) return '';
+      const headers = Object.keys(rows[0]);
+      const escapeCell = value => {
+        if (value === undefined || value === null) return '';
+        const s = String(value);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      return [headers.join(','), ...rows.map(row => headers.map(h => escapeCell(row[h])).join(','))].join('\n');
+    }
+
+    function downloadBlob(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function getDistance() {
+      const value = Number(document.getElementById('distance').value);
+      return Number.isFinite(value) ? value : 150;
+    }
+
+    function getDerivedData() {
+      const combinedRows = buildCombinedTable(state.parsedFiles, getDistance());
+      return {
+        combinedRows,
+        band200280: filterBand(combinedRows, 200, 280),
+        band281320: filterBand(combinedRows, 281, 320),
+        band321400: filterBand(combinedRows, 321, 400),
+        bandSummary: buildBandSummary(combinedRows)
+      };
+    }
+
+    function currentRows() {
+      const { combinedRows, band200280, band281320, band321400, bandSummary } = getDerivedData();
+      if (state.activeTab === '200-280') return band200280;
+      if (state.activeTab === '281-320') return band281320;
+      if (state.activeTab === '321-400') return band321400;
+      if (state.activeTab === 'summary') return bandSummary;
+      return combinedRows;
+    }
+
+    function renderTabs() {
+      const container = document.getElementById('tabs');
+      container.innerHTML = '';
+      tabs.forEach(tab => {
+        const btn = document.createElement('button');
+        btn.className = 'tab' + (state.activeTab === tab.key ? ' active' : '');
+        btn.textContent = tab.label;
+        btn.onclick = () => {
+          state.activeTab = tab.key;
+          render();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function renderTable(rows) {
+      const table = document.getElementById('dataTable');
+      const footnote = document.getElementById('tableFootnote');
+      if (!rows.length) {
+        table.innerHTML = '';
+        footnote.textContent = 'No rows to display.';
+        return;
+      }
+
+      const headerSet = new Set();
+      rows.forEach(row => Object.keys(row).forEach(k => headerSet.add(k)));
+      const headers = Array.from(headerSet);
+      const limited = rows.slice(0, 250);
+
+      const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+      const tbody = `<tbody>${limited.map(row => `<tr>${headers.map(h => {
+        const value = row[h];
+        const shown = typeof value === 'number' && h !== 'wavelength' ? value.toFixed(6) : (value ?? '');
+        return `<td>${shown}</td>`;
+      }).join('')}</tr>`).join('')}</tbody>`;
+
+      table.innerHTML = thead + tbody;
+      footnote.textContent = rows.length > limited.length ? `Showing first ${limited.length} of ${rows.length} rows.` : `${rows.length} row(s).`;
+    }
+
+    function renderFiles() {
+      const tags = document.getElementById('fileTags');
+      tags.innerHTML = '';
+      if (!state.parsedFiles.length) {
+        tags.innerHTML = '<div class="muted">No files loaded yet.</div>';
+        return;
+      }
+      state.parsedFiles.forEach(file => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.textContent = file.filename;
+        tags.appendChild(span);
+      });
+    }
+
+    function renderErrors() {
+      const el = document.getElementById('errors');
+      el.innerHTML = state.errors.map(err => `<div>${err}</div>`).join('');
+    }
+
+    function renderStats() {
+      const { combinedRows } = getDerivedData();
+      document.getElementById('fileCount').textContent = String(state.parsedFiles.length);
+      document.getElementById('rowCount').textContent = String(combinedRows.length);
+      const enabled = !!combinedRows.length;
+      document.getElementById('exportExcel').disabled = !enabled;
+      document.getElementById('exportAllCsv').disabled = !enabled;
+      document.getElementById('exportSummaryCsv').disabled = !enabled;
+      document.getElementById('clearFiles').disabled = !state.parsedFiles.length;
+    }
+
+    function render() {
+      renderTabs();
+      renderFiles();
+      renderErrors();
+      renderStats();
+      renderTable(currentRows());
+    }
+
+    async function handleFiles(fileList) {
+      const files = Array.from(fileList || []).filter(f => /\.txt$/i.test(f.name));
+      const parsed = [];
+      const errors = [];
+
+      for (const file of files) {
+        try {
+          const text = await file.text();
+          parsed.push(parseSpectralFile(text, file.name));
+        } catch (err) {
+          errors.push(err.message || `Failed to parse ${file.name}`);
+        }
+      }
+
+      parsed.forEach(p => {
+        const idx = state.parsedFiles.findIndex(x => x.filename === p.filename);
+        if (idx >= 0) state.parsedFiles[idx] = p;
+        else state.parsedFiles.push(p);
+      });
+      state.errors = errors;
+      render();
+    }
+
+    document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
+    document.getElementById('distance').addEventListener('input', render);
+    document.querySelectorAll('[data-distance]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('distance').value = btn.dataset.distance;
+        render();
+      });
+    });
+
+    document.getElementById('exportExcel').addEventListener('click', () => {
+      const { combinedRows, band200280, band281320, band321400, bandSummary } = getDerivedData();
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(combinedRows), 'All Data');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(band200280), '200-280');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(band281320), '281-320');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(band321400), '321-400');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bandSummary), 'Band Summary');
+      XLSX.writeFile(wb, `processed_uv_data_${getDistance()}cm.xlsx`);
+    });
+
+    document.getElementById('exportAllCsv').addEventListener('click', () => {
+      downloadBlob(`all_data_${getDistance()}cm.csv`, toCsv(getDerivedData().combinedRows), 'text/csv;charset=utf-8;');
+    });
+
+    document.getElementById('exportSummaryCsv').addEventListener('click', () => {
+      downloadBlob(`band_summary_${getDistance()}cm.csv`, toCsv(getDerivedData().bandSummary), 'text/csv;charset=utf-8;');
+    });
+
+    document.getElementById('clearFiles').addEventListener('click', () => {
+      state.parsedFiles = [];
+      state.errors = [];
+      render();
+    });
+
+    const dropzone = document.getElementById('dropzone');
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, e => {
+        e.preventDefault();
+        dropzone.classList.add('active');
+      });
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, e => {
+        e.preventDefault();
+        dropzone.classList.remove('active');
+      });
+    });
+    dropzone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+
+    render();
+  </script>
+</body>
+</html>
