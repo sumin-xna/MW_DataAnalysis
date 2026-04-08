@@ -15,6 +15,7 @@
       --accent: #111827;
       --accent-2: #e2e8f0;
       --danger: #b91c1c;
+      --good: #166534;
     }
     * { box-sizing: border-box; }
     body {
@@ -24,15 +25,22 @@
       color: var(--text);
     }
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 24px;
     }
     h1 { margin: 0 0 8px; font-size: 32px; }
+    h3 { margin: 0 0 10px; font-size: 16px; }
     p.lead { margin: 0 0 24px; color: var(--muted); line-height: 1.5; }
     .grid {
       display: grid;
       grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 20px;
       margin-bottom: 20px;
     }
@@ -62,15 +70,28 @@
       background: #f1f5f9;
     }
     .dropzone p { margin: 10px 0; color: var(--muted); }
-    .controls { display: grid; gap: 12px; }
-    label { font-size: 14px; font-weight: 600; }
-    input[type="number"], .name-input {
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+    input[type="number"], input[type="text"], select, textarea, .name-input {
       width: 100%;
       padding: 10px 12px;
       border-radius: 12px;
       border: 1px solid var(--border);
-      font-size: 16px;
+      font-size: 15px;
       background: white;
+      color: var(--text);
+    }
+    textarea {
+      min-height: 70px;
+      resize: vertical;
     }
     .button-row, .file-tags, .action-row, .tabs {
       display: flex;
@@ -98,6 +119,11 @@
       color: var(--danger);
       border-color: #fecaca;
     }
+    button.good {
+      background: white;
+      color: var(--good);
+      border-color: #bbf7d0;
+    }
     button:disabled { opacity: .5; cursor: not-allowed; }
     .tag {
       display: inline-flex;
@@ -112,7 +138,7 @@
     }
     .file-row {
       display: grid;
-      grid-template-columns: minmax(280px, auto) minmax(220px, 1fr);
+      grid-template-columns: minmax(200px, 280px) minmax(200px, 1fr) 120px;
       gap: 10px;
       align-items: center;
       width: 100%;
@@ -138,7 +164,7 @@
       border-radius: 18px;
       overflow: hidden;
     }
-    .scroll { max-height: 520px; overflow: auto; }
+    .scroll { max-height: 560px; overflow: auto; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -155,6 +181,7 @@
       padding: 10px 12px;
       border-bottom: 1px solid #e2e8f0;
       white-space: nowrap;
+      vertical-align: top;
     }
     .footnote {
       padding: 10px 12px;
@@ -162,9 +189,34 @@
       color: var(--muted);
       border-top: 1px solid #e2e8f0;
     }
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: 1fr; }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .stat-box {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .checkbox-row input {
+      width: auto;
+    }
+    @media (max-width: 1100px) {
+      .grid, .grid-2 { grid-template-columns: 1fr; }
       .file-row { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -172,8 +224,8 @@
   <div class="container">
     <h1>UV Spectral Data Dropzone</h1>
     <p class="lead">
-      Drop one or more spectrometer <code>.txt</code> files, set the distance in cm, rename each output column however you want, and the app will apply
-      <code>value × 4 × π × distance² / 1,000,000</code>, combine all tests into one table, and split the results into 200–280, 281–320, 321–400, and 401–600.
+      Drop one or more spectrometer <code>.txt</code> files, set the distance in cm, rename each output column, track hours, compare against a baseline, normalize spectra, track peaks like
+      <code>254, 365</code>, and monitor degradation across hours.
     </p>
 
     <div class="grid">
@@ -200,30 +252,89 @@
             <label for="distance">Distance (cm)</label>
             <input id="distance" type="number" value="150" />
           </div>
+
           <div class="button-row">
             <button type="button" data-distance="150">150 cm</button>
             <button type="button" data-distance="250">250 cm</button>
           </div>
-          <div class="muted">Files loaded: <strong id="fileCount">0</strong></div>
-          <div class="muted">Rows in combined table: <strong id="rowCount">0</strong></div>
+
+          <div>
+            <label for="peakWavelengths">Tracked peak wavelengths</label>
+            <input id="peakWavelengths" type="text" value="254,365,436,546,589" />
+            <div class="small">Comma-separated wavelengths. Nearest wavelength row will be used.</div>
+          </div>
+
+          <div>
+            <label for="normalizeMode">Normalization mode</label>
+            <select id="normalizeMode">
+              <option value="max">Normalize by each file's max within full spectrum</option>
+              <option value="peak254">Normalize by intensity at 254 nm</option>
+              <option value="peak365">Normalize by intensity at 365 nm</option>
+              <option value="none">No normalization</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="baselineSelect">Comparison baseline</label>
+            <select id="baselineSelect">
+              <option value="">Select baseline</option>
+            </select>
+          </div>
+
+          <div class="checkbox-row">
+            <input id="comparisonMode" type="checkbox" />
+            <label for="comparisonMode" style="margin:0;">Enable comparison mode (Δ columns)</label>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-box">
+              <div class="small">Files loaded</div>
+              <div><strong id="fileCount">0</strong></div>
+            </div>
+            <div class="stat-box">
+              <div class="small">Rows in combined table</div>
+              <div><strong id="rowCount">0</strong></div>
+            </div>
+            <div class="stat-box">
+              <div class="small">Baseline</div>
+              <div><strong id="baselineDisplay">—</strong></div>
+            </div>
+          </div>
+
           <div class="action-row">
             <button id="exportExcel" class="primary" disabled>Export Excel</button>
             <button id="exportAllCsv" disabled>Export all data CSV</button>
             <button id="exportSummaryCsv" disabled>Export band summary CSV</button>
+            <button id="exportPeaksCsv" class="good" disabled>Export peak tracking CSV</button>
+            <button id="exportDegradationCsv" class="good" disabled>Export degradation CSV</button>
           </div>
         </div>
       </section>
     </div>
 
-    <section class="card" style="margin-bottom: 20px;">
-      <h2>Loaded files</h2>
-      <div class="card-body">
-        <div id="fileTags" class="file-tags"></div>
-        <div style="margin-top: 14px;">
-          <button id="clearFiles" class="danger" disabled>Clear files</button>
+    <div class="grid-2">
+      <section class="card">
+        <h2>Loaded files</h2>
+        <div class="card-body">
+          <div id="fileTags" class="file-tags"></div>
+          <div style="margin-top: 14px;">
+            <button id="clearFiles" class="danger" disabled>Clear files</button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section class="card">
+        <h2>Comparison notes</h2>
+        <div class="card-body">
+          <div class="small" style="line-height:1.6;">
+            <div><strong>Comparison mode:</strong> adds Δ columns as <code>current - baseline</code>.</div>
+            <div><strong>Normalized spectra:</strong> lets you compare shape instead of absolute output.</div>
+            <div><strong>Peak tracking:</strong> reports intensity at selected wavelengths for each file.</div>
+            <div><strong>Degradation tracking:</strong> uses hours you enter per file and compares against the earliest hour for the same baseline ordering.</div>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <div class="tabs" id="tabs"></div>
     <div class="table-wrap">
@@ -246,11 +357,15 @@
 
     const tabs = [
       { key: 'all', label: 'All Data' },
+      { key: 'comparison', label: 'Comparison Δ' },
+      { key: 'normalized', label: 'Normalized' },
       { key: '200-280', label: '200–280' },
       { key: '281-320', label: '281–320' },
       { key: '321-400', label: '321–400' },
       { key: '401-600', label: '401–600' },
-      { key: 'summary', label: 'Band Summary' }
+      { key: 'summary', label: 'Band Summary' },
+      { key: 'peaks', label: 'Peak Tracking' },
+      { key: 'degradation', label: 'Degradation' }
     ];
 
     function extractTestName(filename) {
@@ -291,8 +406,32 @@
         filename,
         testName: defaultName,
         customName: defaultName,
+        hours: '',
         rows
       };
+    }
+
+    function getPeakTargets() {
+      return (document.getElementById('peakWavelengths').value || '')
+        .split(',')
+        .map(x => Number(x.trim()))
+        .filter(x => Number.isFinite(x));
+    }
+
+    function getNormalizeMode() {
+      return document.getElementById('normalizeMode').value;
+    }
+
+    function getBaselineName() {
+      return document.getElementById('baselineSelect').value || '';
+    }
+
+    function isComparisonMode() {
+      return document.getElementById('comparisonMode').checked;
+    }
+
+    function getDisplayName(file) {
+      return (file.customName || file.testName || file.filename || 'Unnamed').trim() || 'Unnamed';
     }
 
     function transformRows(rows, distance) {
@@ -308,7 +447,7 @@
 
       parsedFiles.forEach(file => {
         const transformed = transformRows(file.rows, distance);
-        const columnName = (file.customName || file.testName || file.filename || 'Unnamed').trim() || 'Unnamed';
+        const columnName = getDisplayName(file);
 
         transformed.forEach(row => {
           const key = row.wavelength;
@@ -323,15 +462,97 @@
     }
 
     function filterBand(rows, min, max) {
-      return rows.filter(r => r.wavelength >= min && r.wavelength <= max);
+      return rows.filter(r => Number(r.wavelength) >= min && Number(r.wavelength) <= max);
+    }
+
+    function getAllDataColumns(rows) {
+      const columns = new Set();
+      rows.forEach(r => Object.keys(r).forEach(k => columns.add(k)));
+      return Array.from(columns).filter(c => c !== 'wavelength');
+    }
+
+    function getNearestValue(rows, targetWavelength) {
+      if (!rows.length) return null;
+      let best = rows[0];
+      let bestDiff = Math.abs(rows[0].wavelength - targetWavelength);
+      for (const row of rows) {
+        const diff = Math.abs(row.wavelength - targetWavelength);
+        if (diff < bestDiff) {
+          best = row;
+          bestDiff = diff;
+        }
+      }
+      return best ? best.value : null;
+    }
+
+    function getNormalizationFactorForFile(file, distance, mode) {
+      const transformed = transformRows(file.rows, distance);
+      if (!transformed.length) return 1;
+
+      if (mode === 'none') return 1;
+
+      if (mode === 'max') {
+        const maxVal = Math.max(...transformed.map(r => Number(r.value) || 0));
+        return maxVal || 1;
+      }
+
+      if (mode === 'peak254') {
+        return getNearestValue(transformed, 254) || 1;
+      }
+
+      if (mode === 'peak365') {
+        return getNearestValue(transformed, 365) || 1;
+      }
+
+      return 1;
+    }
+
+    function buildNormalizedTable(parsedFiles, distance, normalizeMode) {
+      const byWavelength = new Map();
+
+      parsedFiles.forEach(file => {
+        const transformed = transformRows(file.rows, distance);
+        const factor = getNormalizationFactorForFile(file, distance, normalizeMode) || 1;
+        const columnName = getDisplayName(file);
+
+        transformed.forEach(row => {
+          const key = row.wavelength;
+          if (!byWavelength.has(key)) {
+            byWavelength.set(key, { wavelength: key });
+          }
+          byWavelength.get(key)[columnName] = factor === 0 ? null : row.value / factor;
+        });
+      });
+
+      return Array.from(byWavelength.values()).sort((a, b) => a.wavelength - b.wavelength);
+    }
+
+    function buildComparisonTable(combinedRows, baselineName) {
+      if (!combinedRows.length || !baselineName) return [];
+
+      const valueColumns = getAllDataColumns(combinedRows);
+      if (!valueColumns.includes(baselineName)) return [];
+
+      return combinedRows.map(row => {
+        const out = { wavelength: row.wavelength, [baselineName]: row[baselineName] };
+        valueColumns.forEach(col => {
+          if (col === baselineName) return;
+          out[col] = row[col];
+          const currentVal = Number(row[col]);
+          const baselineVal = Number(row[baselineName]);
+          out[`Δ ${col}`] =
+            Number.isFinite(currentVal) && Number.isFinite(baselineVal)
+              ? currentVal - baselineVal
+              : null;
+        });
+        return out;
+      });
     }
 
     function buildBandSummary(rows) {
       if (!rows.length) return [];
 
-      const allColumns = new Set();
-      rows.forEach(row => Object.keys(row).forEach(k => allColumns.add(k)));
-      const testColumns = Array.from(allColumns).filter(k => k !== 'wavelength');
+      const testColumns = getAllDataColumns(rows);
 
       const bands = [
         { label: '200-280', min: 200, max: 280 },
@@ -350,10 +571,75 @@
       });
     }
 
+    function buildPeakTracking(parsedFiles, distance, peakTargets, normalizeMode) {
+      const rows = [];
+
+      parsedFiles.forEach(file => {
+        const transformed = transformRows(file.rows, distance);
+        const normalizationFactor = getNormalizationFactorForFile(file, distance, normalizeMode) || 1;
+
+        const row = {
+          File: file.filename,
+          Name: getDisplayName(file),
+          Hours: file.hours === '' ? '' : Number(file.hours)
+        };
+
+        peakTargets.forEach(target => {
+          const rawValue = getNearestValue(transformed, target);
+          row[`Peak ${target}`] = rawValue;
+          row[`Norm Peak ${target}`] =
+            normalizeMode === 'none'
+              ? rawValue
+              : (Number.isFinite(rawValue) ? rawValue / normalizationFactor : null);
+        });
+
+        rows.push(row);
+      });
+
+      return rows;
+    }
+
+    function buildDegradationTable(parsedFiles, distance, peakTargets) {
+      const peakRows = buildPeakTracking(parsedFiles, distance, peakTargets, 'none')
+        .filter(r => r.Hours !== '' && Number.isFinite(Number(r.Hours)))
+        .sort((a, b) => Number(a.Hours) - Number(b.Hours));
+
+      if (!peakRows.length) return [];
+
+      const baseline = peakRows[0];
+      return peakRows.map(row => {
+        const out = {
+          Name: row.Name,
+          Hours: row.Hours
+        };
+
+        peakTargets.forEach(target => {
+          const current = Number(row[`Peak ${target}`]);
+          const base = Number(baseline[`Peak ${target}`]);
+          out[`Peak ${target}`] = row[`Peak ${target}`];
+          out[`Δ Peak ${target}`] =
+            Number.isFinite(current) && Number.isFinite(base) ? current - base : null;
+          out[`% Retained ${target}`] =
+            Number.isFinite(current) && Number.isFinite(base) && base !== 0
+              ? (current / base) * 100
+              : null;
+          out[`% Degradation ${target}`] =
+            Number.isFinite(current) && Number.isFinite(base) && base !== 0
+              ? (1 - current / base) * 100
+              : null;
+        });
+
+        return out;
+      });
+    }
+
     function toCsv(rows) {
       if (!rows.length) return '';
 
-      const headers = Object.keys(rows[0]);
+      const headersSet = new Set();
+      rows.forEach(r => Object.keys(r).forEach(k => headersSet.add(k)));
+      const headers = Array.from(headersSet);
+
       const escapeCell = value => {
         if (value === undefined || value === null) return '';
         const s = String(value);
@@ -382,33 +668,59 @@
     }
 
     function getDerivedData() {
-      const combinedRows = buildCombinedTable(state.parsedFiles, getDistance());
+      const distance = getDistance();
+      const normalizeMode = getNormalizeMode();
+      const baselineName = getBaselineName();
+      const peakTargets = getPeakTargets();
+
+      const combinedRows = buildCombinedTable(state.parsedFiles, distance);
+      const comparisonRows = baselineName ? buildComparisonTable(combinedRows, baselineName) : [];
+      const normalizedRows = buildNormalizedTable(state.parsedFiles, distance, normalizeMode);
+      const band200280 = filterBand(combinedRows, 200, 280);
+      const band281320 = filterBand(combinedRows, 281, 320);
+      const band321400 = filterBand(combinedRows, 321, 400);
+      const band401600 = filterBand(combinedRows, 401, 600);
+      const bandSummary = buildBandSummary(combinedRows);
+      const peakTracking = buildPeakTracking(state.parsedFiles, distance, peakTargets, normalizeMode);
+      const degradationTracking = buildDegradationTable(state.parsedFiles, distance, peakTargets);
 
       return {
         combinedRows,
-        band200280: filterBand(combinedRows, 200, 280),
-        band281320: filterBand(combinedRows, 281, 320),
-        band321400: filterBand(combinedRows, 321, 400),
-        band401600: filterBand(combinedRows, 401, 600),
-        bandSummary: buildBandSummary(combinedRows)
+        comparisonRows,
+        normalizedRows,
+        band200280,
+        band281320,
+        band321400,
+        band401600,
+        bandSummary,
+        peakTracking,
+        degradationTracking
       };
     }
 
     function currentRows() {
       const {
         combinedRows,
+        comparisonRows,
+        normalizedRows,
         band200280,
         band281320,
         band321400,
         band401600,
-        bandSummary
+        bandSummary,
+        peakTracking,
+        degradationTracking
       } = getDerivedData();
 
+      if (state.activeTab === 'comparison') return comparisonRows;
+      if (state.activeTab === 'normalized') return normalizedRows;
       if (state.activeTab === '200-280') return band200280;
       if (state.activeTab === '281-320') return band281320;
       if (state.activeTab === '321-400') return band321400;
       if (state.activeTab === '401-600') return band401600;
       if (state.activeTab === 'summary') return bandSummary;
+      if (state.activeTab === 'peaks') return peakTracking;
+      if (state.activeTab === 'degradation') return degradationTracking;
       return combinedRows;
     }
 
@@ -417,6 +729,8 @@
       container.innerHTML = '';
 
       tabs.forEach(tab => {
+        if (tab.key === 'comparison' && !isComparisonMode()) return;
+
         const btn = document.createElement('button');
         btn.className = 'tab' + (state.activeTab === tab.key ? ' active' : '');
         btn.textContent = tab.label;
@@ -426,6 +740,10 @@
         };
         container.appendChild(btn);
       });
+
+      if (state.activeTab === 'comparison' && !isComparisonMode()) {
+        state.activeTab = 'all';
+      }
     }
 
     function renderTable(rows) {
@@ -441,12 +759,14 @@
       const headerSet = new Set();
       rows.forEach(row => Object.keys(row).forEach(k => headerSet.add(k)));
       const headers = Array.from(headerSet);
-      const limited = rows.slice(0, 250);
+      const limited = rows.slice(0, 300);
 
       const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
       const tbody = `<tbody>${limited.map(row => `<tr>${headers.map(h => {
         const value = row[h];
-        const shown = typeof value === 'number' && h !== 'wavelength' ? value.toFixed(6) : (value ?? '');
+        const shown = typeof value === 'number'
+          ? Number.isFinite(value) ? value.toFixed(6) : ''
+          : (value ?? '');
         return `<td>${shown}</td>`;
       }).join('')}</tr>`).join('')}</tbody>`;
 
@@ -454,6 +774,26 @@
       footnote.textContent = rows.length > limited.length
         ? `Showing first ${limited.length} of ${rows.length} rows.`
         : `${rows.length} row(s).`;
+    }
+
+    function refreshBaselineOptions() {
+      const select = document.getElementById('baselineSelect');
+      const currentValue = select.value;
+      select.innerHTML = '<option value="">Select baseline</option>';
+
+      state.parsedFiles.forEach(file => {
+        const name = getDisplayName(file);
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      });
+
+      if ([...select.options].some(o => o.value === currentValue)) {
+        select.value = currentValue;
+      }
+
+      document.getElementById('baselineDisplay').textContent = select.value || '—';
     }
 
     function renderFiles() {
@@ -473,20 +813,31 @@
         label.className = 'tag';
         label.textContent = file.filename;
 
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'name-input';
-        input.value = file.customName || '';
-        input.placeholder = 'Enter output column name';
-
-        input.addEventListener('input', (e) => {
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'name-input';
+        nameInput.value = file.customName || '';
+        nameInput.placeholder = 'Enter output column name';
+        nameInput.addEventListener('input', (e) => {
           state.parsedFiles[index].customName = e.target.value;
+          refreshBaselineOptions();
           renderStats();
           renderTable(currentRows());
         });
 
+        const hoursInput = document.createElement('input');
+        hoursInput.type = 'number';
+        hoursInput.className = 'name-input';
+        hoursInput.value = file.hours;
+        hoursInput.placeholder = 'Hours';
+        hoursInput.addEventListener('input', (e) => {
+          state.parsedFiles[index].hours = e.target.value;
+          renderTable(currentRows());
+        });
+
         row.appendChild(label);
-        row.appendChild(input);
+        row.appendChild(nameInput);
+        row.appendChild(hoursInput);
         tags.appendChild(row);
       });
     }
@@ -497,17 +848,22 @@
     }
 
     function renderStats() {
-      const { combinedRows } = getDerivedData();
+      const { combinedRows, peakTracking, degradationTracking } = getDerivedData();
       document.getElementById('fileCount').textContent = String(state.parsedFiles.length);
       document.getElementById('rowCount').textContent = String(combinedRows.length);
+      document.getElementById('baselineDisplay').textContent = getBaselineName() || '—';
+
       const enabled = !!combinedRows.length;
       document.getElementById('exportExcel').disabled = !enabled;
       document.getElementById('exportAllCsv').disabled = !enabled;
       document.getElementById('exportSummaryCsv').disabled = !enabled;
+      document.getElementById('exportPeaksCsv').disabled = !peakTracking.length;
+      document.getElementById('exportDegradationCsv').disabled = !degradationTracking.length;
       document.getElementById('clearFiles').disabled = !state.parsedFiles.length;
     }
 
     function render() {
+      refreshBaselineOptions();
       renderTabs();
       renderFiles();
       renderErrors();
@@ -541,6 +897,10 @@
 
     document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
     document.getElementById('distance').addEventListener('input', render);
+    document.getElementById('peakWavelengths').addEventListener('input', render);
+    document.getElementById('normalizeMode').addEventListener('change', render);
+    document.getElementById('baselineSelect').addEventListener('change', render);
+    document.getElementById('comparisonMode').addEventListener('change', render);
 
     document.querySelectorAll('[data-distance]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -552,29 +912,63 @@
     document.getElementById('exportExcel').addEventListener('click', () => {
       const {
         combinedRows,
+        comparisonRows,
+        normalizedRows,
         band200280,
         band281320,
         band321400,
         band401600,
-        bandSummary
+        bandSummary,
+        peakTracking,
+        degradationTracking
       } = getDerivedData();
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(combinedRows), 'All Data');
+      if (isComparisonMode() && comparisonRows.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comparisonRows), 'Comparison');
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(normalizedRows), 'Normalized');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(band200280), '200-280');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(band281320), '281-320');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(band321400), '321-400');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(band401600), '401-600');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bandSummary), 'Band Summary');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(peakTracking), 'Peak Tracking');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(degradationTracking), 'Degradation');
       XLSX.writeFile(wb, `processed_uv_data_${getDistance()}cm.xlsx`);
     });
 
     document.getElementById('exportAllCsv').addEventListener('click', () => {
-      downloadBlob(`all_data_${getDistance()}cm.csv`, toCsv(getDerivedData().combinedRows), 'text/csv;charset=utf-8;');
+      downloadBlob(
+        `all_data_${getDistance()}cm.csv`,
+        toCsv(getDerivedData().combinedRows),
+        'text/csv;charset=utf-8;'
+      );
     });
 
     document.getElementById('exportSummaryCsv').addEventListener('click', () => {
-      downloadBlob(`band_summary_${getDistance()}cm.csv`, toCsv(getDerivedData().bandSummary), 'text/csv;charset=utf-8;');
+      downloadBlob(
+        `band_summary_${getDistance()}cm.csv`,
+        toCsv(getDerivedData().bandSummary),
+        'text/csv;charset=utf-8;'
+      );
+    });
+
+    document.getElementById('exportPeaksCsv').addEventListener('click', () => {
+      downloadBlob(
+        `peak_tracking_${getDistance()}cm.csv`,
+        toCsv(getDerivedData().peakTracking),
+        'text/csv;charset=utf-8;'
+      );
+    });
+
+    document.getElementById('exportDegradationCsv').addEventListener('click', () => {
+      downloadBlob(
+        `degradation_tracking_${getDistance()}cm.csv`,
+        toCsv(getDerivedData().degradationTracking),
+        'text/csv;charset=utf-8;'
+      );
     });
 
     document.getElementById('clearFiles').addEventListener('click', () => {
