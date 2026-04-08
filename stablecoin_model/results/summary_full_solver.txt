@@ -1,7 +1,0 @@
-avg crisis cash-only: 0.000000
-avg crisis stablecoins: 0.185185
-monotone stablecoin demand: 1.000000
-monotone total FX demand: 1.000000
-max welfare gain low-mid theta: 0.043922
-min welfare diff high theta: -0.459109
-crisis difference: 0.185185
